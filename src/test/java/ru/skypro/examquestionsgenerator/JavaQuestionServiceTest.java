@@ -1,125 +1,108 @@
 package ru.skypro.examquestionsgenerator;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import ru.skypro.examquestionsgenerator.domain.Question;
 import ru.skypro.examquestionsgenerator.exception.QuestionIsAlreadyAddedException;
 import ru.skypro.examquestionsgenerator.exception.QuestionNotFoundException;
+import ru.skypro.examquestionsgenerator.repository.JavaQuestionRepository;
 import ru.skypro.examquestionsgenerator.service.JavaQuestionService;
-import ru.skypro.examquestionsgenerator.service.QuestionService;
 
 import java.util.*;
+import java.util.stream.Stream;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 public class JavaQuestionServiceTest {
 
-    private final QuestionService questionService = new JavaQuestionService();
+    @Mock
+    private JavaQuestionRepository javaQuestionRepository;
 
-    @AfterEach
-    public void cleanUpEach() {
-        questionService.getAll().forEach(questionService::remove);
-    }
+    @InjectMocks
+    private JavaQuestionService javaQuestionService;
 
-    @Test
-    public void addQuestionPositiveTest() {
-        addQuestionWithCheck();
-    }
+    @ParameterizedTest
+    @MethodSource("question1")
+    public void addTest1(Question question) {
+        when(javaQuestionRepository.add(question)).thenReturn(true);
+        javaQuestionService.add(question);
 
-    private Question addQuestionWithCheck(String question, String answer) {
-        Question expected = new Question(question, answer);
-        int sizeBefore = questionService.getAll().size();
-        questionService.add(expected.getQuestion(), expected.getAnswer());
-        assertThat(questionService.getAll())
-                .asList()
-                .isNotEmpty()
-                .hasSize(sizeBefore + 1)
-                .contains(expected);
-        return expected;
-    }
-
-    private Question addQuestionWithCheck() {
-        return addQuestionWithCheck("Question", "Answer");
-    }
-
-    @Test
-    public void addQuestionNegativeTest() {
-        Question question = addQuestionWithCheck();
+        when(javaQuestionRepository.add(question)).thenThrow(new QuestionIsAlreadyAddedException());
         assertThatExceptionOfType(QuestionIsAlreadyAddedException.class)
-                .isThrownBy(() -> questionService.add(question));
+                .isThrownBy(() -> javaQuestionService.add(question));
+
+        when(javaQuestionRepository.getAll()).thenReturn(Collections.singleton(question));
+        assertThat(javaQuestionService.getAll()).containsExactlyInAnyOrder(question);
     }
 
-    @Test
-    public void addQuestionNegative2Test() {
-        Question question = addQuestionWithCheck();
+    @ParameterizedTest
+    @MethodSource("question2")
+    public void addTest2(String question, String answer) {
+        Question q = new Question(question, answer);
+        when(javaQuestionRepository.add(new Question(question, answer))).thenReturn(true);
+        javaQuestionService.add(question, answer);
+
+        when(javaQuestionRepository.add(new Question(question, answer))).thenThrow(new QuestionIsAlreadyAddedException());
         assertThatExceptionOfType(QuestionIsAlreadyAddedException.class)
-                .isThrownBy(() -> questionService.add(question.getQuestion(), question.getAnswer()));
+                .isThrownBy(() -> javaQuestionService.add(question, answer));
+
+        when(javaQuestionRepository.getAll()).thenReturn(Collections.singleton(q));
+        assertThat(javaQuestionService.getAll()).containsExactlyInAnyOrder(q);
+
     }
 
-    @Test
-    public void removeQuestionPositiveTest() {
-        Question question1 = addQuestionWithCheck("Question1", "Answer1");
-        Question question2 = addQuestionWithCheck("Question2", "Answer2");
-        questionService.remove(question1);
-        assertThat(questionService.getAll())
-                .asList()
-                .isNotEmpty()
-                .hasSize(1)
-                .contains(question2);
-        questionService.remove(question2);
-        assertThat(questionService.getAll())
-                .asList()
-                .isEmpty();
+    @ParameterizedTest
+    @MethodSource("question1")
+    public void removeTest(Question question) {
+        when(javaQuestionRepository.add(question)).thenReturn(true);
+        javaQuestionService.add(question);
+
+        when(javaQuestionRepository.remove(question)).thenReturn(true);
+        javaQuestionService.remove(question);
+
+        when(javaQuestionRepository.remove(question)).thenThrow(new QuestionNotFoundException());
+        assertThatExceptionOfType(QuestionNotFoundException.class).isThrownBy(() -> javaQuestionService.remove(question));
     }
 
-    @Test
-    public void removeQuestionNegativeTest() {
-        Question testQuestion = new Question("questionTest", "answerTest");
-        assertThatExceptionOfType(QuestionNotFoundException.class)
-                .isThrownBy(() -> questionService.remove(testQuestion));
-        addQuestionWithCheck("Question1", "Answer1");
-        addQuestionWithCheck("Question2", "Answer2");
-        assertThatExceptionOfType(QuestionNotFoundException.class)
-                .isThrownBy(() -> questionService.remove(testQuestion));
+
+    @ParameterizedTest
+    @MethodSource("questions")
+    public void removeQuestionTest(Set<Question> questions) {
+        when(javaQuestionRepository.getAll()).thenReturn(questions);
+
+        assertThat(javaQuestionService.getRandomQuestion()).isIn(javaQuestionService.getAll());
     }
 
-    @Test
-    public void getAllTest() {
-        List<Question> questionList = Arrays.asList(
-                new Question("Question1", "Answer1"),
-                new Question("Question2", "Answer2")
+    public static Stream<Arguments> question1() {
+        return Stream.of(
+                Arguments.of((new Question("Question", "Answer")))
         );
+    }
 
-        questionList.forEach(questionService::add);
-        assertThat(questionService.getAll())
-                .asList()
-                .containsExactlyInAnyOrderElementsOf(
-                        List.of(
-                                new Question("Question1", "Answer1"),
-                                new Question("Question2", "Answer2")
+    public static Stream<Arguments> question2() {
+        return Stream.of(
+                Arguments.of("Question", "Answer")
+        );
+    }
+
+    public static Stream<Arguments> questions() {
+        return Stream.of(
+                Arguments.of(
+                        Set.of(
+                                new Question("JavaQuestion1", "JavaAnswer1"),
+                                new Question("JavaQuestion2", "JavaAnswer2"),
+                                new Question("JavaQuestion3", "JavaAnswer3")
                         )
-                );
-    }
-
-    @Test
-    public void getRandomQuestionPositiveTest() {
-        List<Question> questionList = Arrays.asList(
-                new Question("Question1", "Answer1"),
-                new Question("Question2", "Answer2"),
-                new Question("Question3", "Answer3")
+                )
         );
-        Question expected = new Question("Question2", "Answer2");
-        questionList.forEach(questionService::add);
-
-        assertThat(questionService.getAll())
-                .asList().contains(expected);
-    }
-
-    @Test
-    public void getRandomQuestionNegativeTest() {
-        assertThatExceptionOfType(QuestionNotFoundException.class)
-                .isThrownBy(questionService::getRandomQuestion);
     }
 
 }

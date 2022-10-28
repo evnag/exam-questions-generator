@@ -5,10 +5,9 @@ import org.springframework.stereotype.Service;
 import ru.skypro.examquestionsgenerator.repository.QuestionRepository;
 
 @Service
-public class JavaQuestionService extends AbstractQuestionService {
+public class MathQuestionService extends AbstractQuestionService {
 
-    public JavaQuestionService(@Qualifier("javaQuestionRepository") QuestionRepository repository) {
+    public MathQuestionService(@Qualifier("mathQuestionRepository") QuestionRepository repository) {
         super(repository);
     }
-
 }

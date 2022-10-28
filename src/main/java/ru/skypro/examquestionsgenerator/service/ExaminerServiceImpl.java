@@ -4,29 +4,39 @@ import org.springframework.stereotype.Service;
 import ru.skypro.examquestionsgenerator.domain.Question;
 import ru.skypro.examquestionsgenerator.exception.IllegalAmountOfQuestionException;
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 @Service
 public class ExaminerServiceImpl implements ExaminerService {
 
-    private final QuestionService questionService;
+    private final Random random;
 
-    public ExaminerServiceImpl(QuestionService questionService) {
-        this.questionService = questionService;
+    private final QuestionService javaQuestionRepository;
+    private final QuestionService mathQuestionRepository;
+
+    public ExaminerServiceImpl(JavaQuestionService javaQuestionRepository,
+                               MathQuestionService mathQuestionRepository) {
+        this.javaQuestionRepository = javaQuestionRepository;
+        this.mathQuestionRepository = mathQuestionRepository;
+        this.random = new Random();
     }
 
     @Override
     public Collection<Question> getQuestions(int amount) {
-        if (amount > 0 && amount <= questionService.getAll().size()) {
-            Set<Question> setOfQuestions = new HashSet<>();
-            while (setOfQuestions.size() < amount) {
-                setOfQuestions.add(questionService.getRandomQuestion());
-            }
-            return setOfQuestions;
-        } else {
+        List<QuestionService> list = List.of(javaQuestionRepository, mathQuestionRepository);
+
+        int totalQuestions = list.stream()
+                .map(QuestionService::getAll)
+                .mapToInt(Collection::size)
+                .sum();
+
+        if (amount <= 0 || amount > totalQuestions) {
             throw new IllegalAmountOfQuestionException();
         }
+        Set<Question> setOfQuestions = new HashSet<>();
+        while (setOfQuestions.size() < amount) {
+            setOfQuestions.add(list.get(random.nextInt(list.size())).getRandomQuestion());
+        }
+        return setOfQuestions;
     }
 }

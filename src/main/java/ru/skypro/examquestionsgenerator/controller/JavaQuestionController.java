@@ -1,6 +1,7 @@
 package ru.skypro.examquestionsgenerator.controller;
 
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -13,9 +14,10 @@ import java.util.Collection;
 @RestController
 @RequestMapping("/java")
 public class JavaQuestionController {
+
     private final QuestionService questionService;
 
-    public JavaQuestionController(QuestionService questionService) {
+    public JavaQuestionController( @Qualifier("javaQuestionService")QuestionService questionService) {
         this.questionService = questionService;
     }
 
@@ -23,18 +25,13 @@ public class JavaQuestionController {
     public Question addQuestion(@RequestParam String question,
                                 @RequestParam String answer) {
 
-        Question newQuestion = new Question(question, answer);
-        questionService.add(newQuestion);
-        return newQuestion;
+        return questionService.add(question, answer);
     }
 
     @GetMapping("/remove")
     public Question removeQuestion(@RequestParam String question,
                                    @RequestParam String answer) {
-
-        Question removedQuestion = new Question(question, answer);
-        questionService.remove(removedQuestion);
-        return removedQuestion;
+        return questionService.remove(new Question(question, answer));
     }
 
     @GetMapping
