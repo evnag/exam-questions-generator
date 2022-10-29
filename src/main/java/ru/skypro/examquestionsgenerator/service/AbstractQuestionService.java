@@ -7,6 +7,7 @@ import ru.skypro.examquestionsgenerator.repository.QuestionRepository;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Random;
 
 public class AbstractQuestionService implements QuestionService {
@@ -46,7 +47,7 @@ public class AbstractQuestionService implements QuestionService {
 
     @Override
     public Question getRandomQuestion() {
-        ArrayList<Question> listOfQuestion = new ArrayList<>(repository.getAll());
+        List<Question> listOfQuestion = new ArrayList<>(repository.getAll());
         if (!listOfQuestion.isEmpty()) {
             return listOfQuestion.get(random.nextInt(listOfQuestion.size()));
         } else {
